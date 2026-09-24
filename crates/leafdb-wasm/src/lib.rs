@@ -44,7 +44,7 @@ impl LeafDb {
             ExecResult::Rows { columns, rows } => (columns, rows),
             ExecResult::Affected(_) => (Vec::new(), Vec::new()),
         };
-        Ok(result_to_js(&columns, &rows)?)
+        result_to_js(&columns, &rows)
     }
 
     /// Serializes the database to a page image for persistence in OPFS.

@@ -154,7 +154,11 @@ fn exec_create_table(catalog: &mut Catalog, c: CreateTable) -> Result<ExecResult
 
 // --- INSERT ----------------------------------------------------------------
 
-fn exec_insert(catalog: &mut Catalog, storage: &mut dyn Storage, ins: Insert) -> Result<ExecResult> {
+fn exec_insert(
+    catalog: &mut Catalog,
+    storage: &mut dyn Storage,
+    ins: Insert,
+) -> Result<ExecResult> {
     let schema = catalog
         .get(&ins.table)
         .ok_or_else(|| Error::Catalog(format!("no such table '{}'", ins.table)))?
@@ -253,7 +257,11 @@ fn exec_select(catalog: &Catalog, storage: &dyn Storage, sel: Select) -> Result<
 
 // --- UPDATE ----------------------------------------------------------------
 
-fn exec_update(catalog: &mut Catalog, storage: &mut dyn Storage, upd: Update) -> Result<ExecResult> {
+fn exec_update(
+    catalog: &mut Catalog,
+    storage: &mut dyn Storage,
+    upd: Update,
+) -> Result<ExecResult> {
     let schema = catalog
         .get(&upd.table)
         .ok_or_else(|| Error::Catalog(format!("no such table '{}'", upd.table)))?
@@ -289,7 +297,13 @@ fn exec_update(catalog: &mut Catalog, storage: &mut dyn Storage, upd: Update) ->
                     schema.columns[pk].name
                 )));
             }
-            if pk_exists(storage, &schema, pk, &new_values[pk], Some(located.location))? {
+            if pk_exists(
+                storage,
+                &schema,
+                pk,
+                &new_values[pk],
+                Some(located.location),
+            )? {
                 return Err(Error::Constraint(format!(
                     "duplicate primary key value in column '{}'",
                     schema.columns[pk].name
@@ -304,7 +318,11 @@ fn exec_update(catalog: &mut Catalog, storage: &mut dyn Storage, upd: Update) ->
 
 // --- DELETE ----------------------------------------------------------------
 
-fn exec_delete(catalog: &mut Catalog, storage: &mut dyn Storage, del: Delete) -> Result<ExecResult> {
+fn exec_delete(
+    catalog: &mut Catalog,
+    storage: &mut dyn Storage,
+    del: Delete,
+) -> Result<ExecResult> {
     let schema = catalog
         .get(&del.table)
         .ok_or_else(|| Error::Catalog(format!("no such table '{}'", del.table)))?
@@ -342,7 +360,10 @@ fn eval_const(expr: &Expr) -> Result<Value> {
 }
 
 fn filter_matches(expr: &Expr, row: &[Value], schema: &TableSchema) -> Result<bool> {
-    Ok(matches!(eval_predicate(expr, row, schema)?, Value::Boolean(true)))
+    Ok(matches!(
+        eval_predicate(expr, row, schema)?,
+        Value::Boolean(true)
+    ))
 }
 
 fn eval_predicate(expr: &Expr, row: &[Value], schema: &TableSchema) -> Result<Value> {

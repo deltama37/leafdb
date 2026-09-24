@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>leafdb — browser-first RDB in Rust + WebAssembly</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #171a21;
+        --panel-2: #1f232c;
+        --border: #2a2f3a;
+        --text: #e6e9ef;
+        --muted: #9aa4b2;
+        --accent: #57c785;
+        --accent-2: #4a9eff;
+        --danger: #ff6b6b;
+        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: radial-gradient(1200px 600px at 20% -10%, #1b2430 0%, var(--bg) 55%);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      header {
+        padding: 32px 24px 12px;
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+      h1 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
+      h1 .leaf { color: var(--accent); }
+      .subtitle { color: var(--muted); margin-top: 6px; }
+      .badges { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+      .badge {
+        font-size: 12px; padding: 4px 10px; border-radius: 999px;
+        background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+      }
+      .badge.ok { color: var(--accent); border-color: #2c5a41; }
+      .badge.warn { color: #ffcf5c; border-color: #5a4d2c; }
+      main {
+        max-width: 1080px; margin: 0 auto; padding: 12px 24px 60px;
+        display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+      }
+      @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+      .panel {
+        background: var(--panel); border: 1px solid var(--border);
+        border-radius: 14px; padding: 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+      }
+      .panel h2 { margin: 0 0 12px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+      .row { display: flex; gap: 8px; align-items: center; }
+      input[type="text"], textarea {
+        width: 100%; background: var(--panel-2); border: 1px solid var(--border);
+        color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 14px;
+      }
+      textarea { font-family: var(--mono); min-height: 96px; resize: vertical; }
+      button {
+        background: var(--accent); color: #06210f; border: none; border-radius: 8px;
+        padding: 10px 14px; font-weight: 600; cursor: pointer; font-size: 14px;
+      }
+      button.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+      button.ghost { background: transparent; color: var(--accent-2); border: 1px solid var(--border); }
+      button.danger { background: transparent; color: var(--danger); border: 1px solid #5a2c2c; }
+      button:hover { filter: brightness(1.08); }
+      table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 14px; }
+      th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+      th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+      td.done { color: var(--muted); text-decoration: line-through; }
+      .todo-actions { display: flex; gap: 6px; }
+      .todo-actions button { padding: 5px 9px; font-size: 12px; }
+      pre {
+        background: #0b0d11; border: 1px solid var(--border); border-radius: 8px;
+        padding: 12px; overflow: auto; font-family: var(--mono); font-size: 13px; margin: 8px 0 0;
+        white-space: pre-wrap; word-break: break-word;
+      }
+      .muted { color: var(--muted); font-size: 13px; }
+      .kpi { display: flex; gap: 18px; margin-top: 8px; }
+      .kpi div span { display: block; }
+      .kpi .n { font-size: 22px; font-weight: 700; }
+      .kpi .l { font-size: 12px; color: var(--muted); }
+      .full { grid-column: 1 / -1; }
+      .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+      .status-pass { color: var(--accent); font-weight: 700; }
+      .status-fail { color: var(--danger); font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1><span class="leaf">leaf</span>db</h1>
+      <div class="subtitle">A lightweight, browser-first relational database — Rust compiled to WebAssembly, persisted in OPFS.</div>
+      <div class="badges">
+        <span class="badge" id="badge-wasm">WASM: loading…</span>
+        <span class="badge" id="badge-opfs">OPFS: checking…</span>
+        <span class="badge" id="badge-size">image: — bytes</span>
+        <span class="badge" id="badge-tables">tables: —</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel full">
+        <h2>ADR-0001 success criteria (self-test)</h2>
+        <div class="toolbar">
+          <button id="run-suite">Run success criteria</button>
+          <span class="muted">Runs CREATE / INSERT / SELECT and a persistence round-trip, then reports PASS/FAIL.</span>
+        </div>
+        <pre id="suite-output" data-testid="suite-output">Not run yet.</pre>
+      </section>
+
+      <section class="panel">
+        <h2>Todos (persistent)</h2>
+        <div class="row">
+          <input id="todo-title" type="text" placeholder="What needs doing?" data-testid="todo-title" />
+          <button id="add-todo" data-testid="add-todo">Add</button>
+        </div>
+        <div class="kpi">
+          <div><span class="n" id="kpi-total" data-testid="kpi-total">0</span><span class="l">total</span></div>
+          <div><span class="n" id="kpi-open" data-testid="kpi-open">0</span><span class="l">open</span></div>
+          <div><span class="n" id="kpi-done" data-testid="kpi-done">0</span><span class="l">done</span></div>
+        </div>
+        <table>
+          <thead><tr><th>#</th><th>Title</th><th>Status</th><th></th></tr></thead>
+          <tbody id="todo-rows" data-testid="todo-rows"></tbody>
+        </table>
+        <p class="muted" style="margin-top:14px">
+          Reload the page — todos are restored from OPFS by the WebAssembly engine.
+          <button class="ghost" id="reload" style="margin-left:8px">Reload</button>
+          <button class="danger" id="reset" style="margin-left:4px" data-testid="reset">Reset DB</button>
+        </p>
+      </section>
+
+      <section class="panel">
+        <h2>SQL console</h2>
+        <textarea id="sql-input" data-testid="sql-input">SELECT * FROM todos;</textarea>
+        <div class="toolbar" style="margin-top:10px">
+          <button id="run-sql" data-testid="run-sql">Run</button>
+          <button class="secondary" id="ex-create">CREATE</button>
+          <button class="secondary" id="ex-insert">INSERT</button>
+          <button class="secondary" id="ex-select">SELECT</button>
+        </div>
+        <pre id="sql-output" data-testid="sql-output">—</pre>
+      </section>
+    </main>
+
+    <script type="module">
+      import { Database } from "./leafdb.js";
+
+      const $ = (id) => document.getElementById(id);
+      const fmt = (v) => (v === null ? "NULL" : typeof v === "string" ? v : String(v));
+
+      let db;
+
+      async function boot() {
+        db = await Database.open("leafdb-demo");
+        $("badge-wasm").textContent = "WASM: ready";
+        $("badge-wasm").classList.add("ok");
+        if (db.persistent) {
+          $("badge-opfs").textContent = "OPFS: enabled";
+          $("badge-opfs").classList.add("ok");
+        } else {
+          $("badge-opfs").textContent = "OPFS: unavailable (memory only)";
+          $("badge-opfs").classList.add("warn");
+        }
+        await db.exec(
+          "CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done BOOLEAN)"
+        );
+        await render();
+      }
+
+      function refreshBadges() {
+        $("badge-size").textContent = `image: ${db.exportImage().length.toLocaleString()} bytes`;
+        $("badge-tables").textContent = `tables: ${db.tables().join(", ") || "—"}`;
+      }
+
+      async function render() {
+        const todos = await db.query("SELECT id, title, done FROM todos");
+        const tbody = $("todo-rows");
+        tbody.innerHTML = "";
+        for (const t of todos) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${t.id}</td>
+            <td class="${t.done ? "done" : ""}">${escapeHtml(t.title)}</td>
+            <td>${t.done ? "done" : "open"}</td>
+            <td class="todo-actions">
+              <button class="secondary" data-toggle="${t.id}" data-done="${t.done ? 1 : 0}">${t.done ? "reopen" : "done"}</button>
+              <button class="danger" data-del="${t.id}">del</button>
+            </td>`;
+          tbody.appendChild(tr);
+        }
+        $("kpi-total").textContent = todos.length;
+        $("kpi-open").textContent = todos.filter((t) => !t.done).length;
+        $("kpi-done").textContent = todos.filter((t) => t.done).length;
+        refreshBadges();
+      }
+
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      }
+
+      async function nextId() {
+        const rows = await db.queryRaw("SELECT id FROM todos");
+        let max = 0;
+        for (const [id] of rows.rows) max = Math.max(max, id);
+        return max + 1;
+      }
+
+      $("add-todo").addEventListener("click", async () => {
+        const title = $("todo-title").value.trim();
+        if (!title) return;
+        await db.exec("INSERT INTO todos VALUES (?, ?, ?)", [await nextId(), title, false]);
+        $("todo-title").value = "";
+        await render();
+      });
+      $("todo-title").addEventListener("keydown", (e) => { if (e.key === "Enter") $("add-todo").click(); });
+
+      $("todo-rows").addEventListener("click", async (e) => {
+        const toggle = e.target.getAttribute("data-toggle");
+        const del = e.target.getAttribute("data-del");
+        if (toggle) {
+          const done = e.target.getAttribute("data-done") === "1";
+          await db.exec("UPDATE todos SET done = ? WHERE id = ?", [!done, Number(toggle)]);
+          await render();
+        } else if (del) {
+          await db.exec("DELETE FROM todos WHERE id = ?", [Number(del)]);
+          await render();
+        }
+      });
+
+      $("reload").addEventListener("click", () => location.reload());
+      $("reset").addEventListener("click", async () => {
+        await db.exec("DELETE FROM todos");
+        await render();
+      });
+
+      // SQL console
+      $("run-sql").addEventListener("click", async () => {
+        const sql = $("sql-input").value.trim().replace(/;\s*$/, "");
+        try {
+          if (/^\s*select/i.test(sql)) {
+            const res = await db.queryRaw(sql);
+            const header = res.columns.join(" | ");
+            const body = res.rows.map((r) => r.map(fmt).join(" | ")).join("\n");
+            $("sql-output").textContent = `${header}\n${"-".repeat(header.length)}\n${body || "(no rows)"}`;
+          } else {
+            const n = await db.exec(sql);
+            $("sql-output").textContent = `OK — ${n} row(s) affected`;
+            await render();
+          }
+        } catch (err) {
+          $("sql-output").textContent = `Error: ${err.message ?? err}`;
+        }
+      });
+      $("ex-create").addEventListener("click", () => { $("sql-input").value = "CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT);"; });
+      $("ex-insert").addEventListener("click", () => { $("sql-input").value = "INSERT INTO todos VALUES (99, 'From SQL console', false);"; });
+      $("ex-select").addEventListener("click", () => { $("sql-input").value = "SELECT * FROM todos WHERE done = false;"; });
+
+      // ADR success-criteria self-test (runs against an isolated in-memory DB
+      // plus a persistence round-trip on a temp OPFS database).
+      $("run-suite").addEventListener("click", runSuite);
+
+      async function runSuite() {
+        const log = [];
+        const checks = [];
+        const assert = (name, cond) => { checks.push(cond); log.push(`${cond ? "PASS" : "FAIL"}  ${name}`); };
+        try {
+          const t = await Database.open("leafdb-selftest");
+          await t.destroy();
+          const fresh = await Database.open("leafdb-selftest");
+
+          await fresh.exec(`CREATE TABLE todos (
+            id INTEGER PRIMARY KEY,
+            title TEXT,
+            done BOOLEAN
+          )`);
+          const ins = await fresh.exec("INSERT INTO todos VALUES (?, ?, ?)", [1, "Build a database", false]);
+          assert("INSERT affected 1 row", ins === 1);
+
+          const rows = await fresh.query("SELECT * FROM todos WHERE done = ?", [false]);
+          assert("SELECT returns 1 row", rows.length === 1);
+          assert("row id = 1", rows[0].id === 1);
+          assert("row title = 'Build a database'", rows[0].title === "Build a database");
+          assert("row done = false", rows[0].done === false);
+
+          // Persistence: reopen the same named DB and confirm the row survives.
+          const reopened = await Database.open("leafdb-selftest");
+          const after = await reopened.query("SELECT * FROM todos");
+          assert("data survives reopen (OPFS)", after.length === 1 && after[0].title === "Build a database");
+          await reopened.destroy();
+
+          // Constraint check.
+          let dup = false;
+          try { await fresh.exec("INSERT INTO todos VALUES (1, 'dup', false)"); }
+          catch (_e) { dup = true; }
+          assert("duplicate primary key rejected", dup);
+        } catch (err) {
+          log.push(`ERROR: ${err.message ?? err}`);
+          checks.push(false);
+        }
+        const passed = checks.every(Boolean) && checks.length > 0;
+        const summary = passed ? "ALL CHECKS PASSED" : "SOME CHECKS FAILED";
+        $("suite-output").innerHTML =
+          `<span class="${passed ? "status-pass" : "status-fail"}">${summary}</span>\n\n` + log.join("\n");
+        window.__leafdbSuite = { passed, log };
+        await render();
+      }
+
+      boot().catch((e) => {
+        $("badge-wasm").textContent = "WASM: error";
+        $("badge-wasm").classList.add("warn");
+        $("suite-output").textContent = `Boot error: ${e.message ?? e}`;
+      });
+    </script>
+  </body>
+</html>

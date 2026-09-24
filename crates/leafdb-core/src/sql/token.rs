@@ -118,8 +118,9 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>> {
                 }
                 tokens.push(Token::String(s));
             }
-            c if c.is_ascii_digit() || (c == '-' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit())
-            => {
+            c if c.is_ascii_digit()
+                || (c == '-' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit()) =>
+            {
                 let start = i;
                 if c == '-' {
                     i += 1;

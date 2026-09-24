@@ -58,7 +58,9 @@ impl Parser {
     fn expect_word(&mut self) -> Result<String> {
         match self.next()? {
             Token::Word(w) => Ok(w),
-            other => Err(Error::Parse(format!("expected identifier, found {other:?}"))),
+            other => Err(Error::Parse(format!(
+                "expected identifier, found {other:?}"
+            ))),
         }
     }
 
@@ -360,7 +362,9 @@ impl Parser {
                     Ok(Expr::Column(w))
                 }
             }
-            other => Err(Error::Parse(format!("unexpected token in expression: {other:?}"))),
+            other => Err(Error::Parse(format!(
+                "unexpected token in expression: {other:?}"
+            ))),
         }
     }
 }

@@ -19,10 +19,8 @@ fn affected(result: ExecResult) -> usize {
 
 fn seed_todos() -> Database {
     let mut db = Database::create().unwrap();
-    db.execute_str(
-        "CREATE TABLE todos (id INTEGER PRIMARY KEY, title TEXT, done BOOLEAN)",
-    )
-    .unwrap();
+    db.execute_str("CREATE TABLE todos (id INTEGER PRIMARY KEY, title TEXT, done BOOLEAN)")
+        .unwrap();
     db
 }
 
@@ -89,8 +87,11 @@ fn parameters_bind_in_order() {
     .unwrap();
 
     let out = rows(
-        db.execute("SELECT title FROM todos WHERE done = ?", &[Value::Boolean(false)])
-            .unwrap(),
+        db.execute(
+            "SELECT title FROM todos WHERE done = ?",
+            &[Value::Boolean(false)],
+        )
+        .unwrap(),
     );
     assert_eq!(out, vec![vec![Value::Text("Build a database".into())]]);
 }
@@ -122,7 +123,11 @@ fn persistence_round_trip_via_image() {
 
     // Reopen from the exported bytes, as the browser would after reload.
     let mut reopened = Database::open_image(image).unwrap();
-    let out = rows(reopened.execute_str("SELECT id, title, done FROM todos").unwrap());
+    let out = rows(
+        reopened
+            .execute_str("SELECT id, title, done FROM todos")
+            .unwrap(),
+    );
     assert_eq!(out.len(), 3);
     assert_eq!(out[0][1], Value::Text("task 1".into()));
 
@@ -176,20 +181,30 @@ fn update_and_delete() {
     for i in 1..=3 {
         db.execute(
             "INSERT INTO todos VALUES (?, ?, ?)",
-            &[Value::Integer(i), Value::Text(format!("t{i}")), Value::Boolean(false)],
+            &[
+                Value::Integer(i),
+                Value::Text(format!("t{i}")),
+                Value::Boolean(false),
+            ],
         )
         .unwrap();
     }
 
     let updated = affected(
-        db.execute("UPDATE todos SET done = ? WHERE id = ?", &[Value::Boolean(true), Value::Integer(2)])
-            .unwrap(),
+        db.execute(
+            "UPDATE todos SET done = ? WHERE id = ?",
+            &[Value::Boolean(true), Value::Integer(2)],
+        )
+        .unwrap(),
     );
     assert_eq!(updated, 1);
 
     let done_rows = rows(
-        db.execute("SELECT id FROM todos WHERE done = ?", &[Value::Boolean(true)])
-            .unwrap(),
+        db.execute(
+            "SELECT id FROM todos WHERE done = ?",
+            &[Value::Boolean(true)],
+        )
+        .unwrap(),
     );
     assert_eq!(done_rows, vec![vec![Value::Integer(2)]]);
 
@@ -242,7 +257,10 @@ fn rows_spill_across_multiple_pages() {
     for i in 0..count {
         db.execute(
             "INSERT INTO big VALUES (?, ?)",
-            &[Value::Integer(i), Value::Text(format!("row-{i}-{}", "x".repeat(20)))],
+            &[
+                Value::Integer(i),
+                Value::Text(format!("row-{i}-{}", "x".repeat(20))),
+            ],
         )
         .unwrap();
     }
@@ -254,7 +272,10 @@ fn rows_spill_across_multiple_pages() {
     let mut reopened = Database::open_image(image).unwrap();
     let out = rows(
         reopened
-            .execute("SELECT payload FROM big WHERE id = ?", &[Value::Integer(499)])
+            .execute(
+                "SELECT payload FROM big WHERE id = ?",
+                &[Value::Integer(499)],
+            )
             .unwrap(),
     );
     assert_eq!(out.len(), 1);
@@ -273,9 +294,7 @@ fn type_mismatch_is_rejected() {
 fn create_if_not_exists_is_idempotent() {
     let mut db = seed_todos();
     // Second create without IF NOT EXISTS fails.
-    assert!(db
-        .execute_str("CREATE TABLE todos (id INTEGER)")
-        .is_err());
+    assert!(db.execute_str("CREATE TABLE todos (id INTEGER)").is_err());
     // With IF NOT EXISTS it is a no-op.
     db.execute_str("CREATE TABLE IF NOT EXISTS todos (id INTEGER)")
         .unwrap();
