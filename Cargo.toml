@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/leafdb-core",
+    "crates/leafdb-wasm",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/deltama37/leafdb"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

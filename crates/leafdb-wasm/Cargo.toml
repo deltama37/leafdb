@@ -1,0 +1,15 @@
+[package]
+name = "leafdb-wasm"
+description = "WebAssembly bindings for leafdb, exposing the engine to JavaScript/TypeScript."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+leafdb-core = { path = "../leafdb-core" }
+wasm-bindgen = "0.2"
+js-sys = "0.3"
