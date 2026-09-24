@@ -1,0 +1,15 @@
+# Rust
+/target
+**/target
+Cargo.lock.bak
+
+# wasm-pack output (generated build artifacts)
+/web/pkg
+/crates/leafdb-wasm/pkg
+
+# Node
+node_modules
+
+# Editor / OS
+.DS_Store
+*.swp
